@@ -1,0 +1,6 @@
+timeout   3
+default   0
+
+title  sus_os
+root   (hd0,0)
+kernel /kernel

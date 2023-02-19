@@ -6,9 +6,103 @@ extern void call_kb_handle();
 const int screenSize = 80 * 25 * 2;
 const int lines = 160;
 
-char* videoMemory = (char*)0xb8000;
+char* videoMemory = (char*)0xB8000;
+unsigned int* vgaMemory = (unsigned int*)0xA0000;
 unsigned int cursor = 0, commandBufferPos = 0;
 char commandBuffer[256];
+
+struct MultibootSymbolTable
+{
+	unsigned int tabsize;
+	unsigned int strsize;
+	unsigned int addr;
+	unsigned int reserved;
+};
+
+/* The section header table for ELF. */
+struct MultibootELFSectionHeaderTable
+{
+	unsigned int num;
+	unsigned int size;
+	unsigned int addr;
+	unsigned int shndx;
+};
+
+struct MultibootInfo
+{
+	/* Multiboot info version number */
+	unsigned int flags;
+
+	/* Available memory from BIOS */
+	unsigned int memLower;
+	unsigned int memUpper;
+
+	/* "root" partition */
+	unsigned int bootDevice;
+
+	/* Kernel command line */
+	unsigned int cmdline;
+
+	/* Boot-Module list */
+	unsigned int modsCount;
+	unsigned int modsAddr;
+
+	union
+	{
+		struct MultibootSymbolTable sym;
+		struct MultibootELFSectionHeaderTable elf;
+	} u;
+
+	/* Memory Mapping buffer */
+	unsigned int mmapLength;
+	unsigned int mmapAddr;
+
+	/* Drive Info buffer */
+	unsigned int drivesLength;
+	unsigned int drivesAddr;
+
+	/* ROM configuration table */
+	unsigned int configTable;
+
+	/* Boot Loader Name */
+	unsigned int bootloaderName;
+
+	/* APM table */
+	unsigned int apmTable;
+
+	/* Video */
+	unsigned int vbeControlInfo;
+	unsigned int vbeModeInfo;
+	unsigned short vbeMode;
+	unsigned short vbeInterfaceSeg;
+	unsigned short vbeInterfaceOff;
+	unsigned short vbeInterfaceLen;
+
+	unsigned long framebufferAddr;
+	unsigned int framebufferPitch;
+	unsigned int framebufferWidth;
+	unsigned int framebufferHeight;
+	unsigned char framebufferBpp;
+	unsigned char framebufferType;
+	
+	union
+	{
+		struct
+		{
+			unsigned int framebufferPaletteAddr;
+			unsigned short framebufferPaletteNumColors;
+		};
+		struct
+		{
+			unsigned char framebufferRedFieldPosition;
+			unsigned char framebufferRedMaskSize;
+			unsigned char framebufferGreenFieldPosition;
+			unsigned char framebufferGreenMaskSize;
+			unsigned char framebufferBlueFieldPosition;
+			unsigned char framebufferBlueMaskSize;
+		};
+	};
+};
 
 struct IDTEntry
 {
@@ -220,16 +314,86 @@ void ClearCommandBuffer()
 		commandBuffer[i] = ' ';
 }
 
-void kmain()
+void itoa (char *buf, int base, int d)
 {
+	char *p = buf;
+	char *p1, *p2;
+	unsigned long ud = d;
+	int divisor = 10;
+
+	/* If %d is specified and D is minus, put ‘-’ in the head. */
+	if(base == 'd' && d < 0)
+	{
+		*p++ = '-';
+		buf++;
+		ud = -d;
+	}
+	else if(base == 'x')
+		divisor = 16;
+
+	/* Divide UD by DIVISOR until UD == 0. */
+	do
+	{
+		int remainder = ud % divisor;
+
+		*p++ = (remainder < 10) ? remainder + '0' : remainder + 'A' - 10;
+	}
+	while(ud /= divisor);
+
+	/* Terminate BUF. */
+	*p = 0;
+
+	/* Reverse BUF. */
+	p1 = buf;
+	p2 = p - 1;
+	while(p1 < p2)
+	{
+		char tmp = *p1;
+		*p1 = *p2;
+		*p2 = tmp;
+		p1++;
+		p2--;
+	}
+}
+
+void kmain(unsigned long magic, unsigned long addr)
+{
+	struct MultibootInfo* mbInfo = (struct MultibootInfo*)addr;
 	ClearCommandBuffer();
 	ClearScreen(0xF0);
-	Print("                             Welcome to the kernel", 0xF0);
+	Print("                             Welcome to the sus OS", 0xF0);
+	Print("\n", 0x00);
+	Print("Magic number: ", 0xF0);
+	char buf[20];
+	itoa(buf, 'x', magic);
+	Print("0x", 0xF0);
+	Print(buf, 0xF0);
+	if(magic == 0x2BADB002)
+		Print(" -- correct", 0xF0);
+	else
+		Print(" -- incorrect", 0xF0);
+	Print("\n", 0x00);
+	Print("Flags: ", 0xF0);
+	char buf1[20];
+	itoa(buf1, 'x', mbInfo->flags);
+	Print("0x", 0xF0);
+	Print(buf1, 0xF0);
 	Print("\n", 0x00);
 	Print("> ", 0xF0);
 
 	InitIDT();
 	InitKeyboard();
+
+	if(((mbInfo->flags) & (1 << 12)))
+	{
+		unsigned int color = 0x10;
+		void *fb = (void*)(unsigned long)mbInfo->framebufferAddr;
+		for(unsigned int i = 0; i < mbInfo->framebufferWidth && i < mbInfo->framebufferHeight; i++)
+		{
+			unsigned int* pixel = fb + mbInfo->framebufferPitch * i + 4 * i;
+			*pixel = color;
+		}
+	}
 
 	while(1)
 	{
@@ -237,8 +401,6 @@ void kmain()
 		{
 			if(CompareCommandBuffer("clear"))
 				ClearScreen(0xF0);
-			if(CompareCommandBuffer("restart"))
-				return;
 			commandBufferPos = 0;
 			ClearCommandBuffer();
 			Print("> ", 0xF0);

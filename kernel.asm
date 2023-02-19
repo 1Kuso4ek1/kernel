@@ -1,9 +1,20 @@
 bits 32
 section .text
 	align 4
-	dd 0x1BADB002            ;magic
-	dd 0x00                  ;flags
-	dd - (0x1BADB002 + 0x00) ;checksum
+	dd 0x1BADB002               ;magic
+	dd 0x02                     ;flags
+	dd -(0x1BADB002 + 0x02) ;checksum
+
+	dd 0
+	dd 0
+	dd 0
+	dd 0
+	dd 0
+	
+	dd 0
+	dd 640 ; width
+	dd 400 ; height
+	dd 32  ; bpp
 
 global read_port
 global write_port
@@ -23,7 +34,7 @@ read_port:
 
 write_port:
     mov edx, [esp + 4]    
-    mov al, [esp + 4 + 4]  
+    mov al, [esp + 8]  
     out dx, al  
     ret
 
@@ -40,6 +51,10 @@ call_kb_handle:
 start:
 	cli
 	mov esp, stack_space
+	push 0x0
+	popf
+	push ebx ;mbi
+	push eax ;magic
 	call kmain
 	hlt
 
