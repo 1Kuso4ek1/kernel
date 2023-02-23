@@ -2,17 +2,14 @@
 #include <idt.hpp>
 #include <keyboard.hpp>
 #include <utils.hpp>
-#include <font.hpp>
+#include <window.hpp>
 
-void* framebufferPtr;
 int cursorX = 0, cursorY = 10;
 unsigned int commandBufferPos = 0;
 char commandBuffer[256];
 bool shift = false;
-
-void DrawChar(char, unsigned int, unsigned int, unsigned int);
-void DrawPixel(unsigned int, unsigned int, unsigned int);
-void DrawRectangle(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int);
+unsigned int buffers[3][640 * 480];
+Framebuffer* mainFb;
 
 extern "C" void kb_handle()
 {
@@ -41,7 +38,7 @@ extern "C" void kb_handle()
 			{
 				cursorX = 640 - 8; cursorY -= 10;
 			}
-        	DrawRectangle(cursorX, cursorY, 8, 8, 0x202020);
+        	mainFb->DrawRectangle(cursorX, cursorY, 8, 8, 0x202020);
 
         	commandBuffer[--commandBufferPos] = ' ';
         }
@@ -52,7 +49,7 @@ extern "C" void kb_handle()
         	char ch;
         	if(shift) ch = kbKeysShift[keycode];
         	else ch = kbKeys[keycode];
-        	DrawChar(ch, cursorX, cursorY, 0xFFFFFF);
+        	mainFb->DrawChar(ch, cursorX, cursorY, 0xFFFFFF);
         	cursorX += 8;
         	if(cursorX >= 640)
 			{
@@ -85,78 +82,26 @@ void ClearCommandBuffer()
 		commandBuffer[i] = ' ';
 }
 
-void DrawPixel(unsigned int x, unsigned int y, unsigned int color)
+void Wallpaper(Framebuffer* fb)
 {
-	unsigned int* pixel = (unsigned int*)(framebufferPtr + (mbInfo->framebufferPitch * x) + (4 * x) + (4 * y * 640));
-	*pixel = color;
-}
-
-void DrawChar(char ch, unsigned int x, unsigned int y, unsigned int color)
-{
-	unsigned int pixel = 0;
-    unsigned long long ch1 = font[ch];
-    
-    int i = 640 * (y - 1) + x + 8;
-    int inc = 640 - 8;
-    for(int yy = 0; yy < 8; yy++)
-    {
-        i += inc;
-        for(int xx = 0; xx < 8; xx++)
-        {
-            if ((ch1 >> pixel++) & 1)
-            {
-                //buffer[i] = color;
-                unsigned int* pixel = (unsigned int*)(framebufferPtr + mbInfo->framebufferPitch * i + 4 * i);
-                *pixel = color;
-            }
-            i++;
-        }
-    }
-}
-
-void DrawRectangle(unsigned int x, unsigned int y, unsigned int w, unsigned int h, unsigned int color)
-{
-	unsigned int i = 640 * (y - 1);
-	i += x + w;
-    for(int yy = 0; yy < h; yy++)
-    {
-        i += 640 - w;
-        for(int xx = 0; xx < w; xx++)
-        {
-        	unsigned int* pixel = (unsigned int*)(framebufferPtr + mbInfo->framebufferPitch * (i++) + 4 * i);
-        	*pixel = color;
-        }
-    }
-}
-
-void DrawString(char* str, unsigned int x, unsigned int y, unsigned int color)
-{
-	int i = 0;
-	while(str[i] != '\0')
-	{
-		if(str[i] == '\n')
-		{
-			cursorX = 0; cursorY += 10;
-		}
-		else
-		{
-			DrawChar(str[i], x + cursorX, y + cursorY, color);
-			cursorX += 8;
-			if(cursorX >= 640)
-			{
-				cursorX = 0; cursorY += 10;
-			}
-		}
-		i++;
-	}
+	for(int i = 0; i < 640; i++)
+    	for(int j = 0; j < 480; j++)
+    		fb->DrawPixel(i, j, (i + j) / 6);
 }
 
 extern "C" void kmain(unsigned int sp, unsigned long magic, unsigned long addr)
 {
 	mbInfo = (MultibootInfo*)addr;
     framebufferPtr = (void*)(unsigned long)mbInfo->framebufferAddr;
-    DrawRectangle(0, 0, 640, 480, 0x202020);
-    DrawString("Welcome to the SusOS", 240, 0, 0xFFFFFF);
+
+    Framebuffer buf(640, 480, buffers[0]);
+    Wallpaper(&buf);
+    Window w(50, 50, 400, 300, "Terminal", buffers[1]);
+    //Window w1(100, 100, 200, 150, "Window", buffers[2]);
+    
+    mainFb = w.GetFramebuffer();
+    mainFb->DrawRectangle(0, 0, 400, 300, 0x202020);
+    mainFb->DrawString("Welcome to the SusOS", 100, 0, cursorX, cursorY, 0xFFFFFF);
     cursorX = 0; cursorY = 20;
     //DrawString("> ", 0, 0, 0xFFFFFF);
 
@@ -170,21 +115,29 @@ extern "C" void kmain(unsigned int sp, unsigned long magic, unsigned long addr)
 		{
 			if(CompareCommandBuffer("clear"))
 			{
-				DrawRectangle(0, 0, 640, 480, 0x202020);
+				mainFb->DrawRectangle(0, 0, 640, 480, 0x202020);
 				cursorX = 0; cursorY = 10;
 			}
 			if(CompareCommandBuffer("sus"))
 			{
-				DrawString("AMOGUS!\n", 0, 0, 0xFFFFFF);
+				mainFb->DrawString("AMOGUS!\n", 0, 0, cursorX, cursorY, 0xFFFFFF);
 			}
 			if(CompareCommandBuffer("help"))
 			{
-				DrawString("Available commands:\nsus -- system will yell 'AMOGUS!'\n", 0, 0, 0xFFFFFF);
-				DrawString("clear -- clear the screen\nhelp -- this message\n", 0, 0, 0xFFFFFF);
+				mainFb->DrawString("Available commands:\nsus -- system will yell 'AMOGUS!'\n", 0, 0, cursorX, cursorY, 0xFFFFFF);
+				mainFb->DrawString("clear -- clear the screen\nhelp -- this message\n", 0, 0, cursorX, cursorY, 0xFFFFFF);
+			}
+			if(CompareCommandBuffer("close"))
+			{
+				w.SetIsOpen(false);
+				Wallpaper(&buf);
 			}
 			commandBufferPos = 0;
 			ClearCommandBuffer();
-			DrawString("> ", 0, 0, 0xFFFFFF);
+			mainFb->DrawString("> ", 0, 0, cursorX, cursorY, 0xFFFFFF);
 		}
+		w.Draw(&buf);
+		//w1.Draw(&buf);
+		buf.Display();
 	}
 }

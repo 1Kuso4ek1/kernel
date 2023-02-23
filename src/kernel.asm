@@ -55,14 +55,16 @@ call_kb_handle:
 
 start:
 	lgdt [gdtr]
-	jmp CODE32_SEL:.setcs       ; Set CS to our 32-bit flat code selector
+
+	jmp CODE32_SEL:.setcs
 .setcs:
-    mov ax, DATA32_SEL          ; Setup the segment registers with our flat data selector
+    mov ax, DATA32_SEL
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
     mov ss, ax
+    
 	mov esp, stack_space
 	mov ecx, stack_space
 	push 0x0

@@ -4,5 +4,5 @@ x86_64-linux-gnu-ld -m elf_i386 -T ../link.ld -o kernel.bin asmkernel.o ckernel.
 #qemu-system-x86_64 -kernel kernel
 cp kernel.bin ../iso/boot
 grub-mkrescue -o ../sus_os.iso ../iso
-qemu-system-x86_64 -cdrom ../sus_os.iso -m 512M
+qemu-system-x86_64 -cdrom ../sus_os.iso -m 32M
 
