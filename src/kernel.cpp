@@ -8,7 +8,9 @@ int cursorX = 0, cursorY = 10;
 unsigned int commandBufferPos = 0;
 char commandBuffer[256];
 bool shift = false;
-unsigned int buffers[3][640 * 480];
+const unsigned int width = 1600;
+const unsigned int height = 900;
+unsigned int buffers[3][width * height];
 Framebuffer* mainFb;
 
 extern "C" void kb_handle()
@@ -84,9 +86,9 @@ void ClearCommandBuffer()
 
 void Wallpaper(Framebuffer* fb)
 {
-	for(int i = 0; i < 640; i++)
-    	for(int j = 0; j < 480; j++)
-    		fb->DrawPixel(i, j, (i + j) / 6);
+	for(int i = 0; i < width; i++)
+    	for(int j = 0; j < height; j++)
+    		fb->DrawPixel(i, j, (i + j) / 10);
 }
 
 extern "C" void kmain(unsigned int sp, unsigned long magic, unsigned long addr)
@@ -94,7 +96,7 @@ extern "C" void kmain(unsigned int sp, unsigned long magic, unsigned long addr)
 	mbInfo = (MultibootInfo*)addr;
     framebufferPtr = (void*)(unsigned long)mbInfo->framebufferAddr;
 
-    Framebuffer buf(640, 480, buffers[0]);
+    Framebuffer buf(width, height, buffers[0]);
     Wallpaper(&buf);
     Window w(50, 50, 400, 300, "Terminal", buffers[1]);
     //Window w1(100, 100, 200, 150, "Window", buffers[2]);

@@ -12,8 +12,8 @@ section .multiboot
 	dd 0
 	
 	dd 0
-	dd 640 ; width
-	dd 480 ; height
+	dd 1600 ; width
+	dd 900 ; height
 	dd 32  ; bpp
 
 section .text
