@@ -112,14 +112,14 @@ extern "C" void kmain(unsigned int sp, unsigned long magic, unsigned long addr)
 	InitIDT(0x21, (unsigned long)call_kb_handle);
 	write_port(0x21, 0xFD); // keyboard IRQ1
 
-	//Mouse::Init();
+	Init();
 
 	while(1)
 	{
-		/*int x = Mouse::GetX();
-		int y = Mouse::GetY();*/
+		int x = GetX();
+		int y = GetY();
 
-		//mainFb->DrawRectangle(x, y, 10, 10, 0xFFFFFF);
+		mainFb->DrawRectangle(x, y, 10, 10, 0xFFFFFF);
 
 		if(commandBuffer[commandBufferPos] == '\0')
 		{

@@ -10,7 +10,7 @@ void Wait(int type)
     while(time--)
     {
         if((type == 0 && (read_port(PS2_CMD_PORT) & 1) == 1) ||
-            (type == 1 && (read_port(PS2_CMD_PORT) & 2) == 0))
+           (type == 1 && (read_port(PS2_CMD_PORT) & 2) == 0))
             return;
     }
     return;
@@ -18,21 +18,30 @@ void Wait(int type)
 
 void UpdateStatus(char byte)
 {
-    if (byte & 0x01)
+    status.left = 0;
+    status.right = 0;
+    status.middle = 0;
+    status.always1 = 0;
+    status.xSign = 0;
+    status.ySign = 0;
+    status.xOverflow = 0;
+    status.yOverflow = 0;
+
+    if(byte & 0x01)
         status.left = 1;
-    if (byte & 0x02)
+    if(byte & 0x02)
         status.right = 1;
-    if (byte & 0x04)
+    if(byte & 0x04)
         status.middle = 1;
-    if (byte & 0x08)
+    if(byte & 0x08)
         status.always1 = 1;
-    if (byte & 0x10)
+    if(byte & 0x10)
         status.xSign = 1;
-    if (byte & 0x20)
+    if(byte & 0x20)
         status.ySign = 1;
-    if (byte & 0x40)
+    if(byte & 0x40)
         status.xOverflow = 1;
-    if (byte & 0x80)
+    if(byte & 0x80)
         status.yOverflow = 1;
 }
 
@@ -81,7 +90,16 @@ void Update()
         break;
     }
 
-    write_port(0xA0, 0x20 + 12);
+    write_port(0x20, 0x20);
+    write_port(0xA0, 0x20);
+}
+
+void SetRate(unsigned char rate)
+{
+    write_port(MOUSE_DATA_PORT, MOUSE_CMD_SAMPLE_RATE);
+    Read();
+    write_port(MOUSE_DATA_PORT, rate);
+    Read();
 }
 
 void Init()
@@ -91,11 +109,7 @@ void Init()
     Wait(1);
     write_port(PS2_CMD_PORT, 0xA8);
 
-    // print mouse id
-    write_port(MOUSE_DATA_PORT, MOUSE_CMD_MOUSE_ID);
-    status = Read();
-
-    //set_mouse_rate(10);
+    SetRate(10);
 
     Wait(1);
     write_port(PS2_CMD_PORT, 0x20);
@@ -109,10 +123,13 @@ void Init()
     write_port(MOUSE_DATA_PORT, status);
 
     Write(MOUSE_CMD_SET_DEFAULTS);
+    Read();
 
     Write(MOUSE_CMD_ENABLE_PACKET_STREAMING);
+    Read();
 
-    InitIDT(0x20 + 12, (unsigned long)Update);
+    InitIDT(0x2C, (unsigned long)Update);
+    write_port(0xA1, 0xEF);
 }
 
 int GetX()

@@ -32,42 +32,7 @@ typedef struct
 } Status;
 
 void Init();
-/*{
-    unsigned char status;
-
-    Wait(1);
-    write_port(PS2_CMD_PORT, 0xA8);
-
-    // print mouse id
-    write_port(MOUSE_DATA_PORT, MOUSE_CMD_MOUSE_ID);
-    status = Read();
-
-    //set_mouse_rate(10);
-
-    Wait(1);
-    write_port(PS2_CMD_PORT, 0x20);
-    Wait(0);
-    
-    status = (read_port(MOUSE_DATA_PORT) | 2);
-
-    Wait(1);
-    write_port(PS2_CMD_PORT, MOUSE_DATA_PORT);
-    Wait(1);
-    write_port(MOUSE_DATA_PORT, status);
-
-    Write(MOUSE_CMD_SET_DEFAULTS);
-
-    Write(MOUSE_CMD_ENABLE_PACKET_STREAMING);
-
-    InitIDT(0x20 + 12, (unsigned long)Update);
-}*/
+void Update();
 
 int GetX();
-/*{
-    return posx;
-}*/
-
 int GetY();
-/*{
-    return posy;
-}*/
