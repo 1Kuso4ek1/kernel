@@ -3,6 +3,7 @@
 #include <keyboard.hpp>
 #include <utils.hpp>
 #include <window.hpp>
+#include <mouse.hpp>
 
 int cursorX = 0, cursorY = 10;
 unsigned int commandBufferPos = 0;
@@ -111,8 +112,15 @@ extern "C" void kmain(unsigned int sp, unsigned long magic, unsigned long addr)
 	InitIDT(0x21, (unsigned long)call_kb_handle);
 	write_port(0x21, 0xFD); // keyboard IRQ1
 
+	//Mouse::Init();
+
 	while(1)
 	{
+		/*int x = Mouse::GetX();
+		int y = Mouse::GetY();*/
+
+		//mainFb->DrawRectangle(x, y, 10, 10, 0xFFFFFF);
+
 		if(commandBuffer[commandBufferPos] == '\0')
 		{
 			if(CompareCommandBuffer("clear"))

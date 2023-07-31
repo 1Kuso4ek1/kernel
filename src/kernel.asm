@@ -1,8 +1,8 @@
 bits 32
 section .multiboot
 	align 4
-	dd 0x1BADB002               ;magic
-	dd 7                     ;flags
+	dd 0x1BADB002        ;magic
+	dd 7                 ;flags
 	dd -(0x1BADB002 + 7) ;checksum
 
 	dd 0
@@ -13,8 +13,8 @@ section .multiboot
 	
 	dd 0
 	dd 1600 ; width
-	dd 900 ; height
-	dd 32  ; bpp
+	dd 900  ; height
+	dd 32   ; bpp
 
 section .text
 

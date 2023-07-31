@@ -10,9 +10,9 @@ struct IDTEntry
 	unsigned short offsetHigherBits;
 };
 
-IDTEntry idtArr[256];
+static IDTEntry idtArr[256];
 
-void InitPIC()
+static void InitPIC()
 {
 	write_port(0x20, 0x11);
     write_port(0xA0, 0x11);
@@ -30,7 +30,7 @@ void InitPIC()
     write_port(0xA1, 0xff);
 }
 
-void InitIDT(char interrupt, unsigned long addr)
+static void InitIDT(char interrupt, unsigned long addr)
 {
     unsigned long idt[2];
     
